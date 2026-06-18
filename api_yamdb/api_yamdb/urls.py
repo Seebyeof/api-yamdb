@@ -17,10 +17,6 @@ from django.contrib import admin
 from django.urls import include, path
 from django.views.generic import TemplateView
 
-from rest_framework import routers
-from rest_framework_nested.routers import NestedDefaultRouter
-
-router = routers.DefaultRouter()
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -29,5 +25,5 @@ urlpatterns = [
         TemplateView.as_view(template_name='redoc.html'),
         name='redoc'
     ),
-    path('api/v1/', include('router.urls')),
+    path('api/', include('api.urls')),
 ]
