@@ -1,0 +1,44 @@
+from rest_framework.permissions import BasePermission, SAFE_METHODS
+
+
+class IsAdminOrReadOnly(BasePermission):
+    """
+    Разрешает доступ только администраторам для изменений.
+    Остальные пользователи могут только читать (GET, HEAD, OPTIONS).
+    """
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        return request.user.is_admin
+
+
+class IsAdminUser(BasePermission):
+    """Полный доступ только для администраторов и суперпользователей."""
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        return request.user.is_admin
+
+
+class IsAuthorOrModeratorOrAdmin(BasePermission):
+    """
+    Разрешает редактирование/удаление только:
+    - Автору объекта
+    - Модератору
+    - Администратору
+    Используется для отзывов и комментариев.
+    """
+    def has_object_permission(self, request, view, obj):
+        if request.method in SAFE_METHODS:
+            return request.user and request.user.is_authenticated
+
+        return (
+            request.user and (
+
+                obj.author == request.user or
+
+                request.user.is_moderator or
+
+                request.user.is_admin
+            )
+        )
