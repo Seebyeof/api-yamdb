@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.exceptions import NotFound
 from django.utils import timezone
 
 from reviews.models import (
@@ -118,10 +119,16 @@ class ReviewCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Review
-        fields = ('text', 'score')
+        fields = ('id', 'text', 'score')
 
     def validate(self, data):
         title_id = self.context['view'].kwargs.get('title_pk')
+        if not title_id:
+            raise serializers.ValidationError(
+                'Не передан идентификатор произведения.'
+            )
+        if not Title.objects.filter(pk=title_id).exists():
+            raise NotFound('Произведение с таким ID не найдено.')
         user = self.context['request'].user
         if Review.objects.filter(title_id=title_id, author=user).exists():
             raise serializers.ValidationError(
@@ -131,6 +138,10 @@ class ReviewCreateSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         title_id = self.context['view'].kwargs.get('title_pk')
+        if not title_id:
+            raise serializers.ValidationError(
+                'Не передан идентификатор произведения.'
+            )
         user = self.context['request'].user
         return Review.objects.create(
             title_id=title_id,
@@ -150,14 +161,37 @@ class CommentSerializer(serializers.ModelSerializer):
         fields = ('id', 'text', 'author', 'pub_date')
         read_only_fields = ('author', 'pub_date')
 
+    def create(self, validated_data):
+        review_id = self.context['view'].kwargs.get('review_pk')
+        user = self.context['request'].user
+        return Comment.objects.create(
+            review_id=review_id,
+            author=user,
+            **validated_data
+        )
+
 
 class CommentCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
-        fields = ('text',)
+        fields = ('id', 'text')
+
+    def validate(self, data):
+        review_id = self.context['view'].kwargs.get('review_pk')
+        if not review_id:
+            raise serializers.ValidationError(
+                'Не передан идентификатор отзыва.'
+            )
+        if not Review.objects.filter(pk=review_id).exists():
+            raise NotFound('Отзыв с таким ID не найден.')
+        return data
 
     def create(self, validated_data):
         review_id = self.context['view'].kwargs.get('review_pk')
+        if not review_id:
+            raise serializers.ValidationError(
+                'Не передан идентификатор отзыва.'
+            )
         user = self.context['request'].user
         return Comment.objects.create(
             review_id=review_id,
