@@ -177,7 +177,7 @@ class CommentViewSet(viewsets.ModelViewSet):
         )
 
     def initial(self, request, *args, **kwargs):
-        # удаления метода initial() начал падать
+        # после удаления метода initial() начал падать
         # тест test_06_comment_detail_not_auth, поэтому решение было
         # возвращено для соответствия требованиям тестов.
         if request.method == 'POST' and 'pk' in kwargs:
