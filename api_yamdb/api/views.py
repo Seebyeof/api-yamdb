@@ -1,5 +1,4 @@
-from rest_framework import viewsets, status
-from rest_framework.response import Response
+from rest_framework import mixins, viewsets
 from rest_framework.filters import SearchFilter
 from rest_framework.exceptions import (
     NotAuthenticated,
@@ -19,7 +18,6 @@ from reviews.models import (
     Category,
     Genre,
     Review,
-    Comment
 )
 from users.permissions import (
     IsAdminOrReadOnly,
@@ -28,81 +26,43 @@ from users.permissions import (
 from .serializers import (
     CategorySerializer,
     GenreSerializer,
-    TitleReadSerializer,
     TitleCreateSerializer,
     ReviewCreateSerializer,
     CommentCreateSerializer
 )
+from reviews.filters import TitleFilter
 
 
 class TitleViewSet(viewsets.ModelViewSet):
-    queryset = Title.objects.all()
+    queryset = Title.objects.annotate(rating=Avg('reviews__score'))
     serializer_class = TitleCreateSerializer
     http_method_names = ['get', 'post', 'patch', 'delete']
+    filterset_class = TitleFilter
 
     def get_permissions(self):
         if self.action in ('list', 'retrieve'):
             return [AllowAny()]
         return [IsAdminOrReadOnly()]
 
-    def get_serializer_class(self):
-        if self.action in ('list', 'retrieve'):
-            return TitleReadSerializer
-        return TitleCreateSerializer
 
-    def get_queryset(self):
-        queryset = Title.objects.annotate(rating=Avg('reviews__score'))
-        genre = self.request.query_params.get('genre')
-        if genre:
-            queryset = queryset.filter(genre__slug=genre)
-        category = self.request.query_params.get('category')
-        if category:
-            queryset = queryset.filter(category__slug=category)
-        year = self.request.query_params.get('year')
-        if year:
-            queryset = queryset.filter(year=year)
-        name = self.request.query_params.get('name')
-        if name:
-            queryset = queryset.filter(name__icontains=name)
-        return queryset
+class BaseNameSlugViewSet(mixins.ListModelMixin,
+                          mixins.CreateModelMixin,
+                          mixins.DestroyModelMixin,
+                          viewsets.GenericViewSet):
+    lookup_field = 'slug'
+    filter_backends = (SearchFilter,)
+    search_fields = ('name',)
+    permission_classes = [IsAdminOrReadOnly]
 
 
-class CategoryViewSet(viewsets.ModelViewSet):
+class CategoryViewSet(BaseNameSlugViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    lookup_field = 'slug'
-    filter_backends = (SearchFilter,)
-    search_fields = ('name',)
-
-    def get_permissions(self):
-        if self.action in ('list', 'retrieve'):
-            return [AllowAny()]
-        return [IsAdminOrReadOnly()]
-
-    def retrieve(self, request, *args, **kwargs):
-        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
-
-    def partial_update(self, request, *args, **kwargs):
-        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
-class GenreViewSet(viewsets.ModelViewSet):
+class GenreViewSet(BaseNameSlugViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
-    lookup_field = 'slug'
-    filter_backends = (SearchFilter,)
-    search_fields = ('name',)
-
-    def get_permissions(self):
-        if self.action in ('list', 'retrieve'):
-            return [AllowAny()]
-        return [IsAdminOrReadOnly()]
-
-    def retrieve(self, request, *args, **kwargs):
-        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
-
-    def partial_update(self, request, *args, **kwargs):
-        return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
 
 class ReviewViewSet(viewsets.ModelViewSet):

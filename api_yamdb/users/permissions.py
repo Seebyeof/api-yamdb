@@ -7,9 +7,19 @@ class IsAdminOrReadOnly(BasePermission):
     Остальные пользователи могут только читать (GET, HEAD, OPTIONS).
     """
     def has_permission(self, request, view):
-        if not request.user or not request.user.is_authenticated:
-            return False
-        return request.user.is_admin
+        if request.method in SAFE_METHODS:
+            return True
+
+        user = request.user
+
+        return (
+            user.is_authenticated
+            and (
+                user.is_superuser
+                or user.is_staff
+                or getattr(user, 'role', None) == 'admin'
+            )
+        )
 
 
 class IsAdminUser(BasePermission):

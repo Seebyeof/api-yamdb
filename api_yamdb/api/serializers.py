@@ -13,32 +13,27 @@ from reviews.models import (
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ('name', 'slug')
-
-    def validate_slug(self, value):
-        if Category.objects.filter(slug=value).exists():
-            raise serializers.ValidationError(
-                "Категория с таким slug уже существует."
-            )
-        return value
+        exclude = ('id',)
 
 
 class GenreSerializer(serializers.ModelSerializer):
     class Meta:
         model = Genre
-        fields = ('name', 'slug')
-
-    def validate_slug(self, value):
-        if Genre.objects.filter(slug=value).exists():
-            raise serializers.ValidationError(
-                "Жанр с таким slug уже существует."
-            )
-        return value
+        exclude = ('id',)
 
 
-class TitleReadSerializer(serializers.ModelSerializer):
-    category = CategorySerializer(read_only=True)
-    genre = GenreSerializer(many=True, read_only=True)
+class TitleCreateSerializer(serializers.ModelSerializer):
+    category = serializers.SlugRelatedField(
+        slug_field='slug',
+        queryset=Category.objects.all(),
+        write_only=True
+    )
+    genre = serializers.SlugRelatedField(
+        slug_field='slug',
+        queryset=Genre.objects.all(),
+        many=True,
+        write_only=True
+    )
     rating = serializers.FloatField(read_only=True, default=None)
 
     class Meta:
@@ -47,24 +42,11 @@ class TitleReadSerializer(serializers.ModelSerializer):
             'id',
             'name',
             'year',
-            'rating',
             'description',
+            'category',
             'genre',
-            'category'
+            'rating'
         )
-
-
-class TitleCreateSerializer(serializers.ModelSerializer):
-    category = serializers.SlugField(write_only=True)
-    genre = serializers.ListField(
-        child=serializers.SlugField(),
-        write_only=True
-    )
-
-    class Meta:
-        model = Title
-        fields = ('id', 'name', 'year', 'description', 'category', 'genre')
-        read_only_fields = ('id',)
 
     def validate_year(self, value):
         current_year = timezone.now().year
@@ -74,31 +56,11 @@ class TitleCreateSerializer(serializers.ModelSerializer):
             )
         return value
 
-    def validate_category(self, value):
-        try:
-            return Category.objects.get(slug=value)
-        except Category.DoesNotExist:
-            raise serializers.ValidationError(
-                f"Категория со слагом '{value}' не найдена."
-            )
-
-    def validate_genre(self, value):
-        genres = []
-        for slug in value:
-            try:
-                genres.append(Genre.objects.get(slug=slug))
-            except Genre.DoesNotExist:
-                raise serializers.ValidationError(
-                    f"Жанр со слагом '{slug}' не найден."
-                )
-        return genres
-
-    def create(self, validated_data):
-        category = validated_data.pop('category')
-        genres = validated_data.pop('genre')
-        title = Title.objects.create(category=category, **validated_data)
-        title.genre.set(genres)
-        return title
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['category'] = CategorySerializer(instance.category).data
+        representation['genre'] = GenreSerializer(instance.genre.all(), many=True).data
+        return representation
 
 
 class ReviewCreateSerializer(serializers.ModelSerializer):
