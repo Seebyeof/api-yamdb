@@ -85,6 +85,18 @@ class Title(models.Model):
     def __str__(self):
         return self.name
 
+    def _save_with_genres(self, serializer):
+        """Сохраняет объект и устанавливает связи ManyToMany (жанры)."""
+        title = serializer.save()
+        genres = serializer.validated_data.get('genre', [])
+        title.genre.set(genres)
+
+    def perform_create(self, serializer):
+        self._save_with_genres(serializer)
+
+    def perform_update(self, serializer):
+        self._save_with_genres(serializer)
+
 
 class BaseReviewComment(models.Model):
     """Абстрактная модель с общими полями для отзывов и комментариев."""
