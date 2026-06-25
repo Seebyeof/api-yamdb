@@ -8,7 +8,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .permissions import IsAdminUser
+from .permissions import IsAdminOrReadOnly, IsAdminOnly
 from .serializers import (
     SignUpSerializer,
     TokenObtainSerializer,
@@ -122,7 +122,7 @@ class UserViewSet(viewsets.ModelViewSet):
     """Вьюсет для управления пользователями (только для админов)."""
     queryset = User.objects.all().order_by('username')
     serializer_class = UserSerializer
-    permission_classes = [IsAdminUser]
+    permission_classes = [IsAdminOnly]
     lookup_field = 'username'
     pagination_class = UserPagination
     filter_backends = [SearchFilter]
