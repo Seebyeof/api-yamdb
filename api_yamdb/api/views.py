@@ -2,9 +2,8 @@ from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.filters import SearchFilter
 from rest_framework.exceptions import (
-    NotFound,
     NotAuthenticated,
-    MethodNotAllowed
+    MethodNotAllowed,
 )
 from rest_framework.permissions import (
     AllowAny,
@@ -13,6 +12,7 @@ from rest_framework.permissions import (
 )
 
 from django.db.models import Avg
+from django.shortcuts import get_object_or_404
 
 from reviews.models import (
     Title,
@@ -30,9 +30,7 @@ from .serializers import (
     GenreSerializer,
     TitleReadSerializer,
     TitleCreateSerializer,
-    ReviewSerializer,
     ReviewCreateSerializer,
-    CommentSerializer,
     CommentCreateSerializer
 )
 
@@ -113,15 +111,14 @@ class ReviewViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'patch', 'delete']
 
     def get_queryset(self):
-        title_id = self.kwargs.get('title_pk')
-        if not Title.objects.filter(pk=title_id).exists():
-            raise NotFound('Произведение не найдено.')
-        return Review.objects.filter(title_id=title_id)
+        title = get_object_or_404(
+            Title,
+            pk=self.kwargs.get('title_pk')
+        )
+        return title.reviews.all()
 
     def get_serializer_class(self):
-        if self.action == 'create':
-            return ReviewCreateSerializer
-        return ReviewSerializer
+        return ReviewCreateSerializer
 
     def get_permissions(self):
         if self.action in ('list', 'retrieve'):
@@ -132,7 +129,15 @@ class ReviewViewSet(viewsets.ModelViewSet):
             return [IsAuthorOrModeratorOrAdmin()]
 
     def perform_create(self, serializer):
-        serializer.save()
+        title = get_object_or_404(
+            Title,
+            pk=self.kwargs.get('title_pk')
+        )
+
+        serializer.save(
+            author=self.request.user,
+            title=title
+        )
 
 
 class CommentViewSet(viewsets.ModelViewSet):
@@ -140,18 +145,16 @@ class CommentViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'patch', 'delete']
 
     def get_queryset(self):
-        title_id = self.kwargs.get('title_pk')
-        review_id = self.kwargs.get('review_pk')
-        if not Title.objects.filter(pk=title_id).exists():
-            raise NotFound('Произведение не найдено.')
-        if not Review.objects.filter(pk=review_id, title_id=title_id).exists():
-            raise NotFound('Отзыв не найден.')
-        return Comment.objects.filter(review_id=review_id)
+        review = get_object_or_404(
+            Review,
+            pk=self.kwargs.get('review_pk'),
+            title_id=self.kwargs.get('title_pk')
+        )
+
+        return review.comments.all()
 
     def get_serializer_class(self):
-        if self.action == 'create':
-            return CommentCreateSerializer
-        return CommentSerializer
+        return CommentCreateSerializer
 
     def get_permissions(self):
         if self.action in ('list', 'retrieve'):
@@ -162,14 +165,24 @@ class CommentViewSet(viewsets.ModelViewSet):
             return [IsAuthorOrModeratorOrAdmin()]
 
     def perform_create(self, serializer):
-        serializer.save()
+        review = get_object_or_404(
+            Review,
+            pk=self.kwargs.get('review_pk'),
+            title_id=self.kwargs.get('title_pk')
+        )
+
+        serializer.save(
+            author=self.request.user,
+            review=review
+        )
 
     def initial(self, request, *args, **kwargs):
-        if request.method.lower() == 'post' and (
-            'pk' in kwargs
-            or 'comment_pk' in kwargs
-        ):
-            if not request.user or not request.user.is_authenticated:
+        # после удаления метода initial() начал падать
+        # тест test_06_comment_detail_not_auth, поэтому решение было
+        # возвращено для соответствия требованиям тестов.
+        if request.method == 'POST' and 'pk' in kwargs:
+            if not request.user.is_authenticated:
                 raise NotAuthenticated()
             raise MethodNotAllowed('POST')
+
         return super().initial(request, *args, **kwargs)

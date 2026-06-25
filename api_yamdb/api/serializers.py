@@ -1,5 +1,4 @@
 from rest_framework import serializers
-from rest_framework.exceptions import NotFound
 from django.utils import timezone
 
 from reviews.models import (
@@ -102,55 +101,38 @@ class TitleCreateSerializer(serializers.ModelSerializer):
         return title
 
 
-class ReviewSerializer(serializers.ModelSerializer):
+class ReviewCreateSerializer(serializers.ModelSerializer):
     author = serializers.SlugRelatedField(
         read_only=True,
         slug_field='username'
     )
-
-    class Meta:
-        model = Review
-        fields = ('id', 'text', 'score', 'author', 'pub_date')
-        read_only_fields = ('author', 'pub_date')
-
-
-class ReviewCreateSerializer(serializers.ModelSerializer):
     score = serializers.IntegerField(min_value=1, max_value=10)
 
     class Meta:
         model = Review
-        fields = ('id', 'text', 'score')
+        fields = ('id', 'text', 'score', 'author', 'pub_date',)
+        read_only_fields = ('author', 'pub_date',)
 
     def validate(self, data):
+        request = self.context['request']
+
+        if request.method != 'POST':
+            return data
+
         title_id = self.context['view'].kwargs.get('title_pk')
-        if not title_id:
-            raise serializers.ValidationError(
-                'Не передан идентификатор произведения.'
-            )
-        if not Title.objects.filter(pk=title_id).exists():
-            raise NotFound('Произведение с таким ID не найдено.')
-        user = self.context['request'].user
-        if Review.objects.filter(title_id=title_id, author=user).exists():
+
+        if Review.objects.filter(
+            title_id=title_id,
+            author=request.user
+        ).exists():
             raise serializers.ValidationError(
                 'Вы уже оставили отзыв на это произведение.'
             )
+
         return data
 
-    def create(self, validated_data):
-        title_id = self.context['view'].kwargs.get('title_pk')
-        if not title_id:
-            raise serializers.ValidationError(
-                'Не передан идентификатор произведения.'
-            )
-        user = self.context['request'].user
-        return Review.objects.create(
-            title_id=title_id,
-            author=user,
-            **validated_data
-        )
 
-
-class CommentSerializer(serializers.ModelSerializer):
+class CommentCreateSerializer(serializers.ModelSerializer):
     author = serializers.SlugRelatedField(
         read_only=True,
         slug_field='username'
@@ -158,43 +140,5 @@ class CommentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Comment
-        fields = ('id', 'text', 'author', 'pub_date')
-        read_only_fields = ('author', 'pub_date')
-
-    def create(self, validated_data):
-        review_id = self.context['view'].kwargs.get('review_pk')
-        user = self.context['request'].user
-        return Comment.objects.create(
-            review_id=review_id,
-            author=user,
-            **validated_data
-        )
-
-
-class CommentCreateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Comment
-        fields = ('id', 'text')
-
-    def validate(self, data):
-        review_id = self.context['view'].kwargs.get('review_pk')
-        if not review_id:
-            raise serializers.ValidationError(
-                'Не передан идентификатор отзыва.'
-            )
-        if not Review.objects.filter(pk=review_id).exists():
-            raise NotFound('Отзыв с таким ID не найден.')
-        return data
-
-    def create(self, validated_data):
-        review_id = self.context['view'].kwargs.get('review_pk')
-        if not review_id:
-            raise serializers.ValidationError(
-                'Не передан идентификатор отзыва.'
-            )
-        user = self.context['request'].user
-        return Comment.objects.create(
-            review_id=review_id,
-            author=user,
-            **validated_data
-        )
+        fields = ('id', 'text', 'author', 'pub_date',)
+        read_only_fields = ('author', 'pub_date',)
