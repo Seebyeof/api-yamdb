@@ -1,14 +1,11 @@
-from rest_framework import mixins, viewsets
+from rest_framework import mixins, viewsets, status
 from rest_framework.filters import SearchFilter
-from rest_framework.exceptions import (
-    NotAuthenticated,
-    MethodNotAllowed,
-)
 from rest_framework.permissions import (
     AllowAny,
     IsAuthenticatedOrReadOnly,
     IsAuthenticated
 )
+from rest_framework.response import Response
 
 from django.db.models import Avg
 from django.shortcuts import get_object_or_404
@@ -136,13 +133,12 @@ class CommentViewSet(viewsets.ModelViewSet):
             review=review
         )
 
-    def initial(self, request, *args, **kwargs):
-        # после удаления метода initial() начал падать
-        # тест test_06_comment_detail_not_auth, поэтому решение было
-        # возвращено для соответствия требованиям тестов.
+    def dispatch(self, request, *args, **kwargs):
         if request.method == 'POST' and 'pk' in kwargs:
             if not request.user.is_authenticated:
-                raise NotAuthenticated()
-            raise MethodNotAllowed('POST')
-
-        return super().initial(request, *args, **kwargs)
+                response = Response(status=status.HTTP_401_UNAUTHORIZED)
+            else:
+                response = Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+            self.headers = self.default_response_headers
+            return self.finalize_response(request, response, *args, **kwargs)
+        return super().dispatch(request, *args, **kwargs)
