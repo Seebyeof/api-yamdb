@@ -1,19 +1,14 @@
-import re
 from django.contrib.auth.models import AbstractUser
-from django.core.validators import RegexValidator, EmailValidator
+from django.core.validators import EmailValidator
 from django.db import models
 
-USERNAME_MAX_LENGTH = 150
-EMAIL_MAX_LENGTH = 254
-ROLE_MAX_LENGTH = 10
-CONFIRMATION_CODE_MAX_LENGTH = 100
-
-username_validator = RegexValidator(
-    regex=r'^[\w.@+-]+\Z',
-    message=(
-        'Введите допустимое имя пользователя. '
-        'Только буквы, цифры и символы @/./+/-/_.'
-    )
+from .constants import (
+    USERNAME_MAX_LENGTH,
+    EMAIL_MAX_LENGTH,
+    ROLE_MAX_LENGTH,
+    CONFIRMATION_CODE_MAX_LENGTH,
+    username_validator,
+    validate_username_not_me,
 )
 
 
@@ -34,14 +29,14 @@ class User(AbstractUser):
         'Имя пользователя',
         max_length=USERNAME_MAX_LENGTH,
         unique=True,
-        validators=[username_validator]
+        validators=[username_validator, validate_username_not_me],
     )
 
     email = models.EmailField(
         'Адрес электронной почты',
         max_length=EMAIL_MAX_LENGTH,
         unique=True,
-        validators=[EmailValidator()]
+        validators=[EmailValidator()],
     )
 
     bio = models.TextField('Биография', blank=True)
@@ -70,9 +65,11 @@ class User(AbstractUser):
     @property
     def is_admin(self):
         """Проверяет, является ли пользователь администратором."""
+
         return self.role == self.ADMIN or self.is_superuser or self.is_staff
 
     @property
     def is_moderator(self):
         """Проверяет, является ли пользователь модератором."""
+
         return self.role == self.MODERATOR or self.is_admin
