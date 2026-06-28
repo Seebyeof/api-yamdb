@@ -68,7 +68,8 @@ class Title(models.Model):
         related_name='titles',
         verbose_name='Жанры'
     )
-    year = models.IntegerField(
+    # Мы потеряли все произведения до н.э.
+    year = models.PositiveSmallIntegerField(
         verbose_name='Год выпуска',
         validators=[MaxValueValidator(limit_value=current_year)],
         db_index=True
@@ -84,18 +85,6 @@ class Title(models.Model):
 
     def __str__(self):
         return self.name
-
-    def _save_with_genres(self, serializer):
-        """Сохраняет объект и устанавливает связи ManyToMany (жанры)."""
-        title = serializer.save()
-        genres = serializer.validated_data.get('genre', [])
-        title.genre.set(genres)
-
-    def perform_create(self, serializer):
-        self._save_with_genres(serializer)
-
-    def perform_update(self, serializer):
-        self._save_with_genres(serializer)
 
 
 class BaseReviewComment(models.Model):

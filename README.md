@@ -186,5 +186,5 @@ pytest -v
 ## Авторы
 
 - **Губайдулин Станислав** — [GitHub](https://github.com/Seebyeof)
-- **Балла Месси** — [GitHub](https://github.com/MauriceBM)
+- **Месси Балла** — [GitHub](https://github.com/MauriceBM)
 - **Коток Сергей** — [GitHub](https://github.com/StSerj)
