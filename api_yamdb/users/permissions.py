@@ -35,6 +35,7 @@ class IsAuthorOrModeratorOrAdmin(BasePermission):
 
         if request.method in SAFE_METHODS:
             return True
+
         user = request.user
         if not user or not user.is_authenticated:
             return False
