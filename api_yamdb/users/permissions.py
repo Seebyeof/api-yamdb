@@ -5,17 +5,12 @@ class IsAdminOrReadOnly(BasePermission):
     """
     Разрешает доступ только администраторам для изменений.
     Остальные пользователи могут только читать (GET, HEAD, OPTIONS).
-    Использует is_admin модели User (включает is_staff и is_superuser).
+    Полный доступ также для суперпользователей и staff.
     """
     def has_permission(self, request, view):
-        if request.method in SAFE_METHODS:
-            return True
-
-        return bool(
-            request.user
-            and request.user.is_authenticated
-            and request.user.is_admin
-        )
+        if not request.user or not request.user.is_authenticated:
+            return False
+        return request.user.is_admin
 
 
 class IsAdminOnly(BasePermission):
