@@ -4,9 +4,9 @@ from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from rest_framework import generics, permissions, status, viewsets
 from rest_framework.filters import SearchFilter
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
+from .pagination import UserPagination
 
 from .permissions import IsAdminOnly
 from .serializers import (
@@ -111,11 +111,6 @@ class UserMeView(generics.RetrieveUpdateAPIView):
     def get_object(self):
         """Возвращает текущего авторизованного пользователя."""
         return self.request.user
-
-
-class UserPagination(PageNumberPagination):
-    """Пагинация для списка пользователей."""
-    page_size = 10
 
 
 class UserViewSet(viewsets.ModelViewSet):
