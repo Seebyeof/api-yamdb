@@ -1,18 +1,6 @@
 from rest_framework.permissions import BasePermission, SAFE_METHODS
 
 
-class IsAdminOrReadOnly(BasePermission):
-    """
-    Разрешает доступ только администраторам для изменений.
-    Остальные пользователи могут только читать (GET, HEAD, OPTIONS).
-    Полный доступ также для суперпользователей и staff.
-    """
-    def has_permission(self, request, view):
-        if not request.user or not request.user.is_authenticated:
-            return False
-        return request.user.is_admin
-
-
 class IsAdminOnly(BasePermission):
     """Полный доступ только для администраторов и суперпользователей."""
     def has_permission(self, request, view):
@@ -21,6 +9,18 @@ class IsAdminOnly(BasePermission):
             and request.user.is_authenticated
             and request.user.is_admin
         )
+
+
+class IsAdminOrReadOnly(IsAdminOnly):
+    """
+    Разрешает доступ только администраторам для изменений.
+    Остальные пользователи могут только читать (GET, HEAD, OPTIONS).
+    Полный доступ также для суперпользователей и staff.
+    """
+    def has_permission(self, request, view):
+        if request.method in SAFE_METHODS:
+            return True
+        return super().has_permission(request, view)
 
 
 class IsAuthorOrModeratorOrAdmin(BasePermission):
