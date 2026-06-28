@@ -1,11 +1,10 @@
+from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
+
 USERNAME_MAX_LENGTH = 150
 EMAIL_MAX_LENGTH = 254
 ROLE_MAX_LENGTH = 10
 CONFIRMATION_CODE_MAX_LENGTH = 100
-
-from django.core.validators import RegexValidator
-
-from django.core.exceptions import ValidationError
 
 username_validator = RegexValidator(
     regex=r'^[\w.@+-]+\Z',
