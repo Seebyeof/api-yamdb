@@ -35,7 +35,6 @@ class IsAuthorOrModeratorOrAdmin(BasePermission):
 
         if request.method in SAFE_METHODS:
             return True
-<<<<<<< HEAD
         user = request.user
         if not user or not user.is_authenticated:
             return False
@@ -44,29 +43,4 @@ class IsAuthorOrModeratorOrAdmin(BasePermission):
             obj.author == user
             or getattr(user, 'is_moderator', False)
             or user.is_admin
-=======
-
-        return bool(
-            request.user
-            and request.user.is_authenticated
-            and (
-                request.user.is_admin
-                or request.user.is_superuser
-                or request.user.is_staff
-            )
-        )
-
-
-class IsAdminOnly(BasePermission):
-    """Полный доступ только для администраторов и суперпользователей."""
-    def has_permission(self, request, view):
-        return bool(
-            request.user
-            and request.user.is_authenticated
-            and (
-                request.user.is_admin
-                or request.user.is_superuser
-                or request.user.is_staff
-            )
->>>>>>> 5ad6c4d (fix: валидация полей User, константы, объединение пермишенов и регистрация в админке)
         )
